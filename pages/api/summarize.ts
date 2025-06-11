@@ -24,13 +24,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI summarizer. Return two parts:
+            content: `You are a legal AI summarizer. Return two sections:
+            
+Legal Summary: <short paragraph>
 
-Legal Summary: <1 paragraph>
+Plain English Summary: <simplified version>
 
-Plain English Summary: <1 simplified paragraph>
-
-Don't include anything else.`
+Do not include any headings besides those.`
           },
           {
             role: 'user',
@@ -41,13 +41,19 @@ Don't include anything else.`
     });
 
     const result = await openrouterRes.json();
-    const raw = result?.choices?.[0]?.message?.content || '';
 
-    // For now, just send back the raw content (no parsing)
+    console.log('[DEBUG] OpenRouter raw response:', JSON.stringify(result, null, 2)); // ✅ Log entire response
+
+    const content = result?.choices?.[0]?.message?.content?.trim();
+
+    if (!content) {
+      return res.status(500).json({ message: 'No content received from AI.', raw: JSON.stringify(result, null, 2) });
+    }
+
     return res.status(200).json({
       legal: '[DEBUG MODE]',
       plain: '[DEBUG MODE]',
-      raw: raw.trim()
+      raw: content
     });
 
   } catch (err) {
