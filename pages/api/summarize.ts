@@ -24,13 +24,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI summarizer. ONLY reply in this format:
+            content: `You are a legal AI summarizer. Return two parts:
 
-Legal Summary: <one short paragraph>
+Legal Summary: <1 paragraph>
 
-Plain English Summary: <one short paragraph in layperson-friendly language>
+Plain English Summary: <1 simplified paragraph>
 
-DO NOT include anything else — no intros, no titles, no notes. Just strictly follow the format above.`
+Don't include anything else.`
           },
           {
             role: 'user',
@@ -41,24 +41,14 @@ DO NOT include anything else — no intros, no titles, no notes. Just strictly f
     });
 
     const result = await openrouterRes.json();
-    const content = result?.choices?.[0]?.message?.content || '';
+    const raw = result?.choices?.[0]?.message?.content || '';
 
-    const cleaned = content.replace(/\r?\n|\r/g, ' ').trim();
-
-    // Try to extract based on headings
-    const match = cleaned.match(/Legal Summary:\s*(.+?)\s*Plain English Summary:\s*(.+)/i);
-
-    let legal = match?.[1]?.trim() || '';
-    let plain = match?.[2]?.trim() || '';
-
-    // Fallback: if regex fails, take first and second sentence blocks
-    if (!legal || !plain) {
-      const parts = cleaned.split(/(?<=\.|\!|\?)\s+/); // split by sentence
-      legal = parts.slice(0, 2).join(' ') || 'Summary not found.';
-      plain = parts.slice(2, 4).join(' ') || 'Summary not found.';
-    }
-
-    return res.status(200).json({ legal, plain });
+    // For now, just send back the raw content (no parsing)
+    return res.status(200).json({
+      legal: '[DEBUG MODE]',
+      plain: '[DEBUG MODE]',
+      raw: raw.trim()
+    });
 
   } catch (err) {
     console.error('API error:', err);
