@@ -13,48 +13,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const openrouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || ''}`,
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY || ''}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'mistral/mistral-7b-instruct',
+        model: 'gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI. Read the Indian court judgment text from the user and respond ONLY in this exact format:
+            content: `You are a legal AI summarizer. Given an Indian court judgment, generate two sections in this format:
 
-Legal Summary: <short summary for lawyers>
+Legal Summary:
+<write summary for lawyers>
 
-Plain English Summary: <simplified explanation for common people>
+Plain English Summary:
+<write simplified version for non-lawyers>
 
-NO title, NO introduction, NO bullet points. Only these two fields exactly.`
+Use the exact headings: "Legal Summary:" and "Plain English Summary:".`
           },
           {
             role: 'user',
             content: text
           }
-        ]
+        ],
+        temperature: 0.7
       })
     });
 
-    const result = await openrouterRes.json();
-    const aiOutput = result?.choices?.[0]?.message?.content?.trim() || '';
+    const result = await openaiRes.json();
+    const content = result?.choices?.[0]?.message?.content?.trim() || '';
 
-    console.log("[AI OUTPUT]", aiOutput);
+    console.log('[DEBUG] AI Output:', content);
 
-    // Extraction without regex for better compatibility
-    const legalMatch = aiOutput.split('Plain English Summary:')[0]?.replace('Legal Summary:', '').trim();
-    const plainMatch = aiOutput.split('Plain English Summary:')[1]?.trim();
+    const match = content.match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/is);
 
-    const legal = legalMatch || '[Could not extract legal summary]';
-    const plain = plainMatch || '[Could not extract plain summary]';
+    const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
+    const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
 
-    return res.status(200).json({ legal, plain });
+    return res.status(200).json({ legal, plain, raw: content });
   } catch (err) {
-    console.error('[API ERROR]', err);
+    console.error('API error:', err);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
