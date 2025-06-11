@@ -1,6 +1,5 @@
 // File: pages/api/summarize.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { jsonrepair } from 'jsonrepair';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -25,15 +24,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI. When given an Indian court judgment, respond in this exact format:
+            content: `You are a legal AI summarizer. Given an Indian court judgment, generate two sections:
 
-Legal Summary:
-<Brief summary for lawyers>
+Legal Summary: <summary for lawyers>
+Plain English Summary: <simplified summary for non-lawyers>
 
-Plain English Summary:
-<Simple summary for non-lawyers>
-
-Use these exact headings.`
+Use the exact heading "Legal Summary:" and "Plain English Summary:".`
           },
           {
             role: 'user',
@@ -44,16 +40,14 @@ Use these exact headings.`
     });
 
     const result = await openrouterRes.json();
-    const raw = result?.choices?.[0]?.message?.content?.trim() || '';
+    const content = result?.choices?.[0]?.message?.content?.trim() || '';
 
-    console.log('[DEBUG] Raw AI Output:', raw);
-
-    // Match even with extra spacing or newlines
-    const match = raw.match(/Legal Summary:\s*([\s\S]+?)\s*Plain English Summary:\s*([\s\S]+)/i);
-
+    // 🧠 Try to extract using regex
+    const match = content.match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.+)/is);
     const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
     const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
 
+    // ✅ Send the final summaries to the frontend
     return res.status(200).json({ legal, plain });
 
   } catch (err) {
