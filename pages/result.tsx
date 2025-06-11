@@ -1,47 +1,49 @@
-// File: pages/result.tsx
+// pages/result.tsx
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
 export default function Result() {
   const [summary, setSummary] = useState<{ legal: string; plain: string } | null>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    const stored = localStorage.getItem('verdict_summary');
-    if (stored) {
-      setSummary(JSON.parse(stored));
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('verdict_summary');
+      if (stored) {
+        setSummary(JSON.parse(stored));
+      }
+      setLoading(false);
     }
   }, []);
 
-  if (!summary) {
+  if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center text-gray-700 dark:text-white">
-        <p>No summary found. Please go back and generate one.</p>
+        <p>Loading...</p>
       </main>
     );
   }
 
-  const handleCopy = () => {
+  if (!summary) {
+    return (
+      <main className="min-h-screen flex items-center justify-center text-gray-700 dark:text-white">
+        <div className="text-center">
+          <p>No summary found. Please go back and generate one.</p>
+          <button
+            onClick={() => router.push('/')}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+          >
+            Go Back
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  const copyToClipboard = () => {
     const text = `📘 Legal Summary:\n${summary.legal}\n\n💬 Plain English Summary:\n${summary.plain}`;
     navigator.clipboard.writeText(text);
-    alert('✅ Summary copied to clipboard!');
-  };
-
-  const handleDownload = () => {
-    const blob = new Blob(
-      [`📘 Legal Summary:\n${summary.legal}\n\n💬 Plain English Summary:\n${summary.plain}`],
-      { type: 'text/plain' }
-    );
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'verdict_summary.txt';
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleBack = () => {
-    router.push('/');
   };
 
   return (
@@ -65,24 +67,17 @@ export default function Result() {
 
         <div className="flex flex-wrap gap-4 mt-6">
           <button
-            onClick={handleBack}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+            onClick={() => router.push('/')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl"
           >
-            🔁 Try Another
+            🔄 Summarize Another
           </button>
 
           <button
-            onClick={handleCopy}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            onClick={copyToClipboard}
+            className="px-4 py-2 bg-green-600 text-white rounded-xl"
           >
-            📋 Copy
-          </button>
-
-          <button
-            onClick={handleDownload}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-          >
-            📥 Download
+            📋 Copy to Clipboard
           </button>
         </div>
       </div>
