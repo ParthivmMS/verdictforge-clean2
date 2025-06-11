@@ -20,21 +20,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'mistral/mistral-7b-instruct',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a legal AI trained to summarize Indian court judgments. Return only this format:
-Legal Summary: <summary for lawyers>
-Plain English Summary: <summary for laypersons>`
-          },
-          {
-            role: 'user',
-            content: text
-          }
-        ]
-      })
-    });
+  model: 'mistral/mistral-7b-instruct',
+  messages: [
+    {
+      role: 'system',
+      content: `You are a legal AI summarizer. ONLY reply in this exact format — no introductions or explanations:
+
+Legal Summary: <one short paragraph summarizing legal points>
+
+Plain English Summary: <one short paragraph in simple English for laypersons>
+
+Do NOT add anything else before or after. Strictly follow this structure.`
+    },
+    {
+      role: 'user',
+      content: text
+    }
+  ]
+})
 
     const result = await openrouterRes.json();
     const content = result?.choices?.[0]?.message?.content || '';
