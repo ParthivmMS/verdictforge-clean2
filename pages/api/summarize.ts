@@ -1,61 +1,55 @@
 // File: pages/api/summarize.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
-import axios from 'axios';
 
-const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+import type { NextApiRequest, NextApiResponse } from 'next';
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { text } = req.body;
-  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
-
-  if (!text || !apiKey) {
-    return res.status(400).json({ error: 'Missing text or API key' });
+  if (!text || typeof text !== 'string') {
+    return res.status(400).json({ error: 'Invalid input' });
   }
 
   try {
-    const systemPrompt = `
-You are a senior legal associate. Summarize the given Indian legal judgment in exactly this format:
-
-Legal Summary:
-<Insert legal summary here>
-
-Plain English Summary:
-<Insert plain English explanation here>
-
-⚠️ Do not change the headings or their order.
-`;
-
-    const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
-      {
-        model: 'mistralai/mistral-7b-instruct:free',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: text },
-        ],
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json'
       },
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+      body: JSON.stringify({
+        model: 'mistralai/mixtral-8x7b',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a legal judgment summarizer specialized in Indian court decisions. Return a clear and professional summary with two sections:
+            
+📘 Legal Summary: [a formal explanation suitable for lawyers and law students]
 
-    const content = response.data.choices[0].message.content || '';
+💬 Plain English Summary: [a simplified summary for non-lawyers]`
+          },
+          {
+            role: 'user',
+            content: text
+          }
+        ]
+      })
+    });
 
-    // Updated Regex Parsing (safe even if spacing varies)
-    const match = content.match(/Legal Summary:\s*(.+?)\s*Plain English Summary:\s*(.+)/is);
+    const json = await response.json();
+    const content = json.choices?.[0]?.message?.content || '';
+
+    // ✅ FIXED REGEX: works without needing ES2018 target
+    const match = content.match(/Legal Summary:\s*([\s\S]+?)\s*Plain English Summary:\s*([\s\S]+)/i);
 
     const legal = match?.[1]?.trim() || '';
     const plain = match?.[2]?.trim() || '';
 
-    res.status(200).json({ legal, plain });
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to summarize', detail: error.message });
+    return res.status(200).json({ legal, plain });
+  } catch (err) {
+    console.error('API Error:', err);
+    return res.status(500).json({ error: 'Failed to generate summary' });
   }
-};
-
-export default handler;
+}
