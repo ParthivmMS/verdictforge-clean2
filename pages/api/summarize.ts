@@ -12,16 +12,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ message: 'Invalid request body' });
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ message: 'Missing OpenRouter API Key' });
-  }
-
   try {
     const openrouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || ''}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -29,7 +24,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         messages: [
           {
             role: 'system',
-            content: 'You are a legal AI trained to summarize Indian court judgments. Return:\n\nLegal Summary: <brief summary for lawyers>\nPlain English Summary: <simplified version for non-lawyers>'
+            content: `You are a legal AI trained to summarize Indian court judgments. Return only this format:
+Legal Summary: <summary for lawyers>
+Plain English Summary: <summary for laypersons>`
           },
           {
             role: 'user',
@@ -40,24 +37,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     const result = await openrouterRes.json();
+    const content = result?.choices?.[0]?.message?.content || '';
 
-    const raw = result?.choices?.[0]?.message?.content || '';
-    const flattened = raw.replace(/\r?\n|\r/g, ' '); // flatten newlines for safe matching
-
+    // Safe fallback if headings not found
+    const flattened = content.replace(/\r?\n|\r/g, ' ');
     const match = flattened.match(/Legal Summary:\s*(.+?)\s*Plain English Summary:\s*(.+)/i);
 
-    const legal = match?.[1]?.trim() || '';
-    const plain = match?.[2]?.trim() || '';
-
-    if (!legal || !plain) {
-      console.warn('⚠️ Summary format not matched. Raw response:', raw);
-      return res.status(500).json({ message: 'Summary not generated. Please try again.' });
-    }
+    const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
+    const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
 
     return res.status(200).json({ legal, plain });
 
   } catch (err) {
-    console.error('API Error:', err);
+    console.error('❌ summarize.ts API error:', err);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
