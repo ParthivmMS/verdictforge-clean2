@@ -24,12 +24,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI summarizer. Given an Indian court judgment, generate two sections:
+            content: `You are a legal AI summarizer. You will be given an Indian court judgment. Your job is to return a JSON object ONLY like this:
 
-Legal Summary: <summary for lawyers>
-Plain English Summary: <simplified summary for non-lawyers>
+{
+  "legal": "Legal summary here",
+  "plain": "Plain English summary here"
+}
 
-Use the exact heading "Legal Summary:" and "Plain English Summary:".`
+DO NOT add explanations. DO NOT add headings. DO NOT add anything else. Just return the JSON with two keys: "legal" and "plain".`
           },
           {
             role: 'user',
@@ -40,24 +42,19 @@ Use the exact heading "Legal Summary:" and "Plain English Summary:".`
     });
 
     const result = await openrouterRes.json();
-    const content = result?.choices?.[0]?.message?.content?.trim() || '';
+    const raw = result?.choices?.[0]?.message?.content?.trim();
 
-    console.log('[DEBUG] Full AI Output:', content);
+    console.log('[AI JSON OUTPUT]', raw);
 
-    // ✅ FIXED extraction logic
-    let legal = '[Could not extract legal summary]';
-    let plain = '[Could not extract plain summary]';
-
-    if (content.includes('Plain English Summary:')) {
-      const parts = content.split(/Plain English Summary:/i);
-      legal = parts[0].replace(/Legal Summary:/i, '').trim();
-      plain = parts[1].trim();
-    }
+    // ✅ Extract summary safely
+    const parsed = JSON.parse(raw || '{}');
+    const legal = parsed.legal || '[Could not extract legal summary]';
+    const plain = parsed.plain || '[Could not extract plain summary]';
 
     return res.status(200).json({ legal, plain });
 
   } catch (err) {
-    console.error('API error:', err);
+    console.error('[API ERROR]', err);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
