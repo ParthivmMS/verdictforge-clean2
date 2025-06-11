@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 Legal Summary: <summary for lawyers>
 Plain English Summary: <simplified summary for non-lawyers>
 
-Use exactly these headings: "Legal Summary:" and "Plain English Summary:".`
+Use the exact heading "Legal Summary:" and "Plain English Summary:".`
           },
           {
             role: 'user',
@@ -40,19 +40,20 @@ Use exactly these headings: "Legal Summary:" and "Plain English Summary:".`
     });
 
     const result = await openrouterRes.json();
-    const raw = JSON.stringify(result, null, 2);
-    console.log('[DEBUG] Full OpenRouter Response:\n', raw);
-
     const content = result?.choices?.[0]?.message?.content?.trim() || '';
 
-    return res.status(200).json({
-      legal: '[DEBUG MODE]',
-      plain: '[DEBUG MODE]',
-      raw: content
-    });
+    console.log('[DEBUG] Full AI Output:', content);
+
+    // Extract actual summaries from response
+    const match = content.match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/is);
+
+    const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
+    const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
+
+    return res.status(200).json({ legal, plain });
 
   } catch (err) {
-    console.error('[ERROR] summarize.ts:', err);
+    console.error('API error:', err);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
