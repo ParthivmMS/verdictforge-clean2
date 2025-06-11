@@ -24,13 +24,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI summarizer. ONLY reply in this exact format — no introductions or explanations:
+            content: `You are a legal AI summarizer. ONLY reply in this format:
 
-Legal Summary: <one short paragraph summarizing legal points>
+Legal Summary: <one short paragraph>
 
-Plain English Summary: <one short paragraph in simple English for laypersons>
+Plain English Summary: <one short paragraph in layperson-friendly language>
 
-Do NOT add anything else before or after. Strictly follow this structure.`
+DO NOT include anything else — no intros, no titles, no notes. Just strictly follow the format above.`
           },
           {
             role: 'user',
@@ -43,15 +43,19 @@ Do NOT add anything else before or after. Strictly follow this structure.`
     const result = await openrouterRes.json();
     const content = result?.choices?.[0]?.message?.content || '';
 
-    // Safe fallback parsing
-    const flattened = content.replace(/\r?\n|\r/g, ' ');
-    const match = flattened.match(/Legal Summary:\s*(.+?)\s*Plain English Summary:\s*(.+)/i);
+    const cleaned = content.replace(/\r?\n|\r/g, ' ').trim();
 
-    const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
-    const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
+    // Try to extract based on headings
+    const match = cleaned.match(/Legal Summary:\s*(.+?)\s*Plain English Summary:\s*(.+)/i);
 
-    if (!legal || !plain || legal.includes('[Could not') || plain.includes('[Could not')) {
-      return res.status(500).json({ message: 'Summary not generated. Please try again.' });
+    let legal = match?.[1]?.trim() || '';
+    let plain = match?.[2]?.trim() || '';
+
+    // Fallback: if regex fails, take first and second sentence blocks
+    if (!legal || !plain) {
+      const parts = cleaned.split(/(?<=\.|\!|\?)\s+/); // split by sentence
+      legal = parts.slice(0, 2).join(' ') || 'Summary not found.';
+      plain = parts.slice(2, 4).join(' ') || 'Summary not found.';
     }
 
     return res.status(200).json({ legal, plain });
