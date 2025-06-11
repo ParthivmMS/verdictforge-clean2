@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 Legal Summary: <summary for lawyers>
 Plain English Summary: <simplified summary for non-lawyers>
 
-Use the exact heading "Legal Summary:" and "Plain English Summary:".`
+Use exactly these headings: "Legal Summary:" and "Plain English Summary:".`
           },
           {
             role: 'user',
@@ -40,24 +40,19 @@ Use the exact heading "Legal Summary:" and "Plain English Summary:".`
     });
 
     const result = await openrouterRes.json();
+    const raw = JSON.stringify(result, null, 2);
+    console.log('[DEBUG] Full OpenRouter Response:\n', raw);
 
     const content = result?.choices?.[0]?.message?.content?.trim() || '';
 
-    console.log('[DEBUG] AI Raw Output:', content);
-
-    if (!content) {
-      return res.status(500).json({ message: 'AI returned no content.' });
-    }
-
-    // Temporary: Show raw content for debugging
     return res.status(200).json({
-      legal: '[DEBUG]',
-      plain: '[DEBUG]',
+      legal: '[DEBUG MODE]',
+      plain: '[DEBUG MODE]',
       raw: content
     });
 
   } catch (err) {
-    console.error('API error:', err);
+    console.error('[ERROR] summarize.ts:', err);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
