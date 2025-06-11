@@ -1,5 +1,5 @@
-// File: pages/api/summarize.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { jsonrepair } from 'jsonrepair';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -24,14 +24,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI summarizer. You will be given an Indian court judgment. Your job is to return a JSON object ONLY like this:
+            content: `You are a legal AI summarizer. Given an Indian court judgment, return ONLY this JSON:
 
 {
-  "legal": "Legal summary here",
-  "plain": "Plain English summary here"
+  "legal": "Legal summary for lawyers",
+  "plain": "Plain English summary for non-lawyers"
 }
 
-DO NOT add explanations. DO NOT add headings. DO NOT add anything else. Just return the JSON with two keys: "legal" and "plain".`
+Do not add extra explanation. Just return JSON.`
           },
           {
             role: 'user',
@@ -42,19 +42,18 @@ DO NOT add explanations. DO NOT add headings. DO NOT add anything else. Just ret
     });
 
     const result = await openrouterRes.json();
-    const raw = result?.choices?.[0]?.message?.content?.trim();
+    const raw = result?.choices?.[0]?.message?.content?.trim() || '';
 
-    console.log('[AI JSON OUTPUT]', raw);
-
-    // ✅ Extract summary safely
-    const parsed = JSON.parse(raw || '{}');
+    // Repair & parse
+    const fixed = jsonrepair(raw);
+    const parsed = JSON.parse(fixed);
     const legal = parsed.legal || '[Could not extract legal summary]';
     const plain = parsed.plain || '[Could not extract plain summary]';
 
     return res.status(200).json({ legal, plain });
 
   } catch (err) {
-    console.error('[API ERROR]', err);
+    console.error('API error:', err);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
