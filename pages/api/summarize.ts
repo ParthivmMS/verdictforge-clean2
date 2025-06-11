@@ -16,12 +16,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   try {
     const systemPrompt = `
-You are a senior legal associate. Summarize the given Indian legal judgment in two parts:
-1. A professional legal summary with Facts, Issues, Reasoning, and Decision.
-2. A simple plain English explanation.
+You are a senior legal associate. Summarize the given Indian legal judgment in exactly this format:
 
-Output both separately.
-    `;
+Legal Summary:
+<Insert legal summary here>
+
+Plain English Summary:
+<Insert plain English explanation here>
+
+⚠️ Do not change the headings or their order.
+`;
 
     const response = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
@@ -40,13 +44,15 @@ Output both separately.
       }
     );
 
-    const content = response.data.choices[0].message.content;
+    const content = response.data.choices[0].message.content || '';
 
-    const [legal, plain] = content.split(/Plain English Explanation:/i);
-    res.status(200).json({
-      legal: legal?.trim().replace(/^Legal Summary:/i, '') || '',
-      plain: plain?.trim() || '',
-    });
+    // Updated Regex Parsing (safe even if spacing varies)
+    const match = content.match(/Legal Summary:\s*(.+?)\s*Plain English Summary:\s*(.+)/is);
+
+    const legal = match?.[1]?.trim() || '';
+    const plain = match?.[2]?.trim() || '';
+
+    res.status(200).json({ legal, plain });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to summarize', detail: error.message });
   }
