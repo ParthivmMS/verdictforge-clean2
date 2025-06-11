@@ -24,12 +24,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI summarizer. Given an Indian court judgment, generate two sections:
+            content: `You are a legal AI assistant. Your job is to return the following format only:
 
 Legal Summary: <summary for lawyers>
-Plain English Summary: <simplified summary for non-lawyers>
+Plain English Summary: <summary for non-lawyers>
 
-Use the exact heading "Legal Summary:" and "Plain English Summary:".`
+No introduction, no title, just those two labeled parts.`
           },
           {
             role: 'user',
@@ -40,14 +40,20 @@ Use the exact heading "Legal Summary:" and "Plain English Summary:".`
     });
 
     const result = await openrouterRes.json();
-    const content = result?.choices?.[0]?.message?.content?.trim() || '';
+    const aiText = result?.choices?.[0]?.message?.content?.trim() || '';
 
-    // 🧠 Try to extract using regex
-    const match = content.match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.+)/is);
-    const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
-    const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
+    // 👇 Split manually instead of regex (more reliable)
+    const legalStart = aiText.indexOf('Legal Summary:');
+    const plainStart = aiText.indexOf('Plain English Summary:');
 
-    // ✅ Send the final summaries to the frontend
+    const legal = legalStart !== -1 && plainStart !== -1
+      ? aiText.slice(legalStart + 14, plainStart).trim()
+      : '[Could not extract legal summary]';
+
+    const plain = plainStart !== -1
+      ? aiText.slice(plainStart + 23).trim()
+      : '[Could not extract plain summary]';
+
     return res.status(200).json({ legal, plain });
 
   } catch (err) {
