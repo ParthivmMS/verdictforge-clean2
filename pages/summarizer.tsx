@@ -8,25 +8,33 @@ export default function Summarizer() {
   const router = useRouter();
 
   const handleSubmit = async () => {
-    if (!input.trim()) return alert("Please enter a judgment text.");
-    setLoading(true);
+  if (!input.trim()) return alert("Please enter a judgment text.");
+  setLoading(true);
 
-    try {
-      const res = await fetch('/api/summarize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: input }),
-      });
+  try {
+    const res = await fetch('/api/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: input }),
+    });
 
-      const data = await res.json();
-      localStorage.setItem('verdict_summary', JSON.stringify(data));
+    const data = await res.json();
+
+    if (data.legal && data.plain) {
+      localStorage.setItem('verdict_summary', JSON.stringify({
+        legal: data.legal,
+        plain: data.plain,
+      }));
       router.push('/result');
-    } catch (err) {
-      alert("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
+    } else {
+      alert("Summary not generated. Please try again.");
     }
-  };
+  } catch (err) {
+    alert("Something went wrong. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <main className="min-h-screen bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white px-4 py-10">
