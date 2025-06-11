@@ -24,12 +24,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI assistant. Your job is to return the following format only:
+            content: `You are a legal AI. Read the Indian court judgment text from the user and respond ONLY in this exact format:
 
-Legal Summary: <summary for lawyers>
-Plain English Summary: <summary for non-lawyers>
+Legal Summary: <short summary for lawyers>
 
-No introduction, no title, just those two labeled parts.`
+Plain English Summary: <simplified explanation for common people>
+
+NO title, NO introduction, NO bullet points. Only these two fields exactly.`
           },
           {
             role: 'user',
@@ -40,24 +41,20 @@ No introduction, no title, just those two labeled parts.`
     });
 
     const result = await openrouterRes.json();
-    const aiText = result?.choices?.[0]?.message?.content?.trim() || '';
+    const aiOutput = result?.choices?.[0]?.message?.content?.trim() || '';
 
-    // 👇 Split manually instead of regex (more reliable)
-    const legalStart = aiText.indexOf('Legal Summary:');
-    const plainStart = aiText.indexOf('Plain English Summary:');
+    console.log("[AI OUTPUT]", aiOutput);
 
-    const legal = legalStart !== -1 && plainStart !== -1
-      ? aiText.slice(legalStart + 14, plainStart).trim()
-      : '[Could not extract legal summary]';
+    // Extraction without regex for better compatibility
+    const legalMatch = aiOutput.split('Plain English Summary:')[0]?.replace('Legal Summary:', '').trim();
+    const plainMatch = aiOutput.split('Plain English Summary:')[1]?.trim();
 
-    const plain = plainStart !== -1
-      ? aiText.slice(plainStart + 23).trim()
-      : '[Could not extract plain summary]';
+    const legal = legalMatch || '[Could not extract legal summary]';
+    const plain = plainMatch || '[Could not extract plain summary]';
 
     return res.status(200).json({ legal, plain });
-
   } catch (err) {
-    console.error('API error:', err);
+    console.error('[API ERROR]', err);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
