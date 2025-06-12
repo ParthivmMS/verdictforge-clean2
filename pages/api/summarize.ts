@@ -17,43 +17,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI trained to summarize Indian court judgments. Reply only with:
+            content: `You are a legal AI trained to summarize Indian court judgments. Reply in this exact format:
 
-Legal Summary: <brief professional summary>
-Plain English Summary: <simplified version anyone can understand>
+Legal Summary:
+<summary for lawyers>
 
-Use exact labels and nothing else.`
+Plain English Summary:
+<simplified summary for the public>`
           },
           {
             role: 'user',
-            content: text
-          }
-        ]
-      })
+            content: text,
+          },
+        ],
+      }),
     });
 
     const result = await openaiRes.json();
     const content = result?.choices?.[0]?.message?.content?.trim() || '';
 
-    console.log("🔍 Raw AI Response:", content);
+    // 🧪 Log full output for debugging
+    console.log('[OPENAI Raw Response]:', content);
 
-    // ✅ More flexible match
-    const match = content.match(/Legal Summary[:：]?\s*(.*?)\s*Plain English Summary[:：]?\s*(.*)/is);
+    // ✅ More flexible extraction
+    const legalMatch = content.match(/Legal Summary:\s*([\s\S]*?)\n\s*Plain English Summary:/i);
+    const plainMatch = content.match(/Plain English Summary:\s*([\s\S]*)/i);
 
-    const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
-    const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
+    const legal = legalMatch?.[1]?.trim() || '[Could not extract legal summary]';
+    const plain = plainMatch?.[1]?.trim() || '[Could not extract plain summary]';
 
     return res.status(200).json({ legal, plain, raw: content });
 
   } catch (err) {
-    console.error('❌ API error:', err);
+    console.error('API error:', err);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
