@@ -13,47 +13,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+    const openrouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY || ''}`,
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || ''}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'openai/gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI summarizer. Given an Indian court judgment, respond using the format below:
+            content: `You are a legal AI summarizer. Given an Indian court judgment, generate two sections:
 
-Legal Summary: <summary written in formal legal style>
+Legal Summary: <summary for lawyers>
+Plain English Summary: <simplified summary for non-lawyers>
 
-Plain English Summary: <summary written simply for non-lawyers>
-
-Make sure to use the exact headings "Legal Summary:" and "Plain English Summary:".`
+Use exactly these labels: "Legal Summary:" and "Plain English Summary:"`,
           },
           {
             role: 'user',
-            content: text
-          }
+            content: text,
+          },
         ],
-        temperature: 0.7
-      })
+      }),
     });
 
-    const result = await openaiRes.json();
+    const result = await openrouterRes.json();
     const content = result?.choices?.[0]?.message?.content?.trim() || '';
 
-    // Debug log (optional)
-    console.log('AI Output:', content);
+    console.log('[DEBUG] Full AI Output:', content);
 
-    const match = content.match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/is);
+    const match = content.match(/Legal Summary:\s*(.+?)\s*Plain English Summary:\s*(.+)/is);
+
     const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
     const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
 
     return res.status(200).json({ legal, plain, raw: content });
+
   } catch (err) {
-    console.error('OpenAI API Error:', err);
+    console.error('API error:', err);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
