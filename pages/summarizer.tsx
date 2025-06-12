@@ -1,60 +1,19 @@
-// File: pages/summarizer.tsx
-import { useState } from 'react';
-import { useRouter } from 'next/router';
+// ✅ FILE: pages/api/summarize.ts import type { NextApiRequest, NextApiResponse } from 'next';
 
-export default function Summarizer() {
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+export default async function handler(req: NextApiRequest, res: NextApiResponse) { if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 
-  const handleSubmit = async () => {
-    if (!input.trim()) return alert("Please enter a judgment text.");
-    setLoading(true);
+const { text } = req.body; if (!text || typeof text !== 'string') return res.status(400).json({ message: 'Invalid input' });
 
-    try {
-      const res = await fetch('/api/summarize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: input }),
-      });
+try { const response = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { Authorization: Bearer ${process.env.OPENAI_API_KEY || ''}, 'Content-Type': 'application/json', }, body: JSON.stringify({ model: 'gpt-4o', messages: [ { role: 'system', content: You're a legal AI. Summarize Indian court judgments clearly.\n\nFormat:\n\nLegal Summary:\n<lawyer-style summary>\n\nPlain English Summary:\n<easy-to-read version> }, { role: 'user', content: text, } ] }) });
 
-      const data = await res.json();
+const json = await response.json();
+const content = json?.choices?.[0]?.message?.content || '';
+const match = content.match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/is);
 
-      if (data.legal && data.plain) {
-        localStorage.setItem('verdict_summary', JSON.stringify({
-          legal: data.legal,
-          plain: data.plain,
-          raw: data.raw || '', // ✅ Save raw output too
-        }));
-        router.push('/result');
-      } else {
-        alert("Summary not generated. Please try again.");
-      }
-    } catch (err) {
-      alert("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
+const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
 
-  return (
-    <main className="min-h-screen bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white px-4 py-10">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-4">Paste Legal Judgment</h1>
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Paste the full judgment text here..."
-          className="w-full h-64 p-4 rounded-lg border dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800"
-        />
-        <button
-          onClick={handleSubmit}
-          className="mt-4 w-full py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
-          disabled={loading}
-        >
-          {loading ? "Summarizing..." : "Generate Summary"}
-        </button>
-      </div>
-    </main>
-  );
-}
+return res.status(200).json({ legal, plain });
+
+} catch (err) { console.error(err); return res.status(500).json({ message: 'Internal Server Error' }); } }
+
