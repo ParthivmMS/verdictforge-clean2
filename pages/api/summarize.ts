@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-3.5-turbo', // or any supported one you use
+        model: 'openai/gpt-3.5-turbo', // or any supported one you us
         messages: [
           {
             role: 'system',
