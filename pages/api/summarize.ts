@@ -7,6 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { text } = req.body;
+
   if (!text || typeof text !== 'string') {
     return res.status(400).json({ message: 'Invalid request body' });
   }
@@ -39,11 +40,11 @@ Use the exact headings.`
     });
 
     const result = await openaiRes.json();
-
     const content = result?.choices?.[0]?.message?.content?.trim() || '';
-    console.log('[DEBUG] OpenAI Response:', content); // ✅ SHOWS UP IN VERCEL LOGS
 
-    const match = content.match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/is);
+    console.log('[DEBUG] OpenAI Response:', content); // Show raw output in logs
+
+    const match = content.replace(/\n/g, ' ').match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/i);
     const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
     const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
 
