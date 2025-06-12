@@ -43,7 +43,7 @@ Use the exact headings.`
     const content = result?.choices?.[0]?.message?.content?.trim() || '';
 console.log("🔍 OpenAI Response:", content);
     // Extract summaries using regex
-    const match = content.match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/is);
+    const match = content.match(/(?:\*\*)?Legal Summary[:：]\**?\s*(.*?)\s*(?:\*\*)?Plain English Summary[:：]\**?\s*(.*)/is);
     const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
     const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
 
