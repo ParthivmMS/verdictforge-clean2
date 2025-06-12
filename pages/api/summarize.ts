@@ -41,7 +41,7 @@ Use the exact headings.`
 
     const result = await openaiRes.json();
     const content = result?.choices?.[0]?.message?.content?.trim() || '';
-
+console.log("🔍 OpenAI Response:", content);
     // Extract summaries using regex
     const match = content.match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/is);
     const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
