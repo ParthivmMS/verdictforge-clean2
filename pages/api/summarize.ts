@@ -24,12 +24,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI trained to summarize Indian court judgments. Reply with:
+            content: `You are a legal AI trained to summarize Indian court judgments. Reply only with:
 
-Legal Summary: <summary for lawyers>
-Plain English Summary: <simplified summary for non-lawyers>
+Legal Summary: <brief professional summary>
+Plain English Summary: <simplified version anyone can understand>
 
-Use the exact headings.`
+Use exact labels and nothing else.`
           },
           {
             role: 'user',
@@ -41,16 +41,19 @@ Use the exact headings.`
 
     const result = await openaiRes.json();
     const content = result?.choices?.[0]?.message?.content?.trim() || '';
-console.log("🔍 OpenAI Response:", content);
-    // Extract summaries using regex
-    const match = content.match(/(?:\*\*)?Legal Summary[:：]\**?\s*(.*?)\s*(?:\*\*)?Plain English Summary[:：]\**?\s*(.*)/is);
+
+    console.log("🔍 Raw AI Response:", content);
+
+    // ✅ More flexible match
+    const match = content.match(/Legal Summary[:：]?\s*(.*?)\s*Plain English Summary[:：]?\s*(.*)/is);
+
     const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
     const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
 
     return res.status(200).json({ legal, plain, raw: content });
 
   } catch (err) {
-    console.error('API error:', err);
+    console.error('❌ API error:', err);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
