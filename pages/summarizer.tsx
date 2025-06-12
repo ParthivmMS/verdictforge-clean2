@@ -8,33 +8,34 @@ export default function Summarizer() {
   const router = useRouter();
 
   const handleSubmit = async () => {
-  if (!input.trim()) return alert("Please enter a judgment text.");
-  setLoading(true);
+    if (!input.trim()) return alert("Please enter a judgment text.");
+    setLoading(true);
 
-  try {
-    const res = await fetch('/api/summarize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: input }),
-    });
+    try {
+      const res = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: input }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data.legal && data.plain) {
-      localStorage.setItem('verdict_summary', JSON.stringify({
-        legal: data.legal,
-        plain: data.plain,
-      }));
-      router.push('/result');
-    } else {
-      alert("Summary not generated. Please try again.");
+      if (data.legal && data.plain) {
+        localStorage.setItem('verdict_summary', JSON.stringify({
+          legal: data.legal,
+          plain: data.plain,
+          raw: data.raw || '', // ✅ Save raw output too
+        }));
+        router.push('/result');
+      } else {
+        alert("Summary not generated. Please try again.");
+      }
+    } catch (err) {
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    alert("Something went wrong. Please try again.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <main className="min-h-screen bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white px-4 py-10">
