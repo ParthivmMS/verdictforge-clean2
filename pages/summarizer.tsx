@@ -1,64 +1,60 @@
-// File: pages/api/summarize.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
+// File: pages/summarizer.tsx
+import { useState } from 'react';
+import { useRouter } from 'next/router';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
+export default function Summarizer() {
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  const { text } = req.body;
+  const handleSubmit = async () => {
+    if (!input.trim()) return alert("Please enter a judgment text.");
+    setLoading(true);
 
-  if (!text || typeof text !== 'string') {
-    return res.status(400).json({ message: 'Invalid request body' });
-  }
+    try {
+      const res = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: input }),
+      });
 
-  try {
-    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY || ''}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a legal AI trained to summarize Indian court judgments.
+      const data = await res.json();
 
-Always return your response using exactly the following headings:
+      if (data.legal && data.plain) {
+        localStorage.setItem('verdict_summary', JSON.stringify({
+          legal: data.legal,
+          plain: data.plain,
+          raw: data.raw || '',
+        }));
+        router.push('/result');
+      } else {
+        alert("Summary not generated. Please try again.");
+      }
+    } catch (err) {
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-Legal Summary:
-<summary for legal professionals>
-
-Plain English Summary:
-<simplified summary for general audience>
-
-Do not skip or reword the headings. Format clearly for extraction.`
-          },
-          {
-            role: 'user',
-            content: text
-          }
-        ],
-        temperature: 0.7
-      })
-    });
-
-    const result = await openaiRes.json();
-    const content = result?.choices?.[0]?.message?.content?.trim() || '';
-
-    console.log('[GPT-4o Output]', content); // Optional: for debugging
-
-    // Extract using regex
-    const match = content.match(/Legal Summary:\s*(.+?)\s*Plain English Summary:\s*(.+)/is);
-
-    const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
-    const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
-
-    return res.status(200).json({ legal, plain });
-  } catch (err) {
-    console.error('[API Error]', err);
-    return res.status(500).json({ message: 'Internal Server Error' });
-  }
+  return (
+    <main className="min-h-screen px-6 py-10 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-3xl font-bold mb-4">Paste Legal Judgment</h1>
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Paste the full judgment text here..."
+          className="w-full h-64 p-4 rounded-lg border dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800"
+        />
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="mt-4 w-full py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
+        >
+          {loading ? "Summarizing..." : "Generate Summary"}
+        </button>
+      </div>
+    </main>
+  );
 }
