@@ -13,46 +13,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY || ''}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-3.5-turbo', // or any supported one you us
+        model: 'gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI assistant. Given a court judgment, reply strictly in this format:
+            content: `You are a legal AI summarizer. Given an Indian court judgment, respond using the format below:
 
-Legal Summary: <brief legal summary>
+Legal Summary: <summary written in formal legal style>
 
-Plain English Summary: <simplified version>
+Plain English Summary: <summary written simply for non-lawyers>
 
-Do not add anything before or after. Headings must be exact.`
+Make sure to use the exact headings "Legal Summary:" and "Plain English Summary:".`
           },
           {
             role: 'user',
             content: text
           }
-        ]
+        ],
+        temperature: 0.7
       })
     });
 
-    const result = await response.json();
+    const result = await openaiRes.json();
     const content = result?.choices?.[0]?.message?.content?.trim() || '';
 
-    console.log("[AI RAW OUTPUT]:", content);
+    // Debug log (optional)
+    console.log('AI Output:', content);
 
     const match = content.match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/is);
     const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
     const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
 
     return res.status(200).json({ legal, plain, raw: content });
-
-  } catch (error) {
-    console.error("API error:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+  } catch (err) {
+    console.error('OpenAI API Error:', err);
+    return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
