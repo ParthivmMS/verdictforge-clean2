@@ -24,11 +24,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI trained to summarize Indian court judgments. Respond with EXACTLY these two sections and nothing else:
+            content: `You are a legal AI summarizer. Given a court judgment, reply with only the following two headings and summaries.
 
-Legal Summary: <short summary for lawyers>
+Legal Summary:
+<Brief legal summary for lawyers>
 
-Plain English Summary: <simplified version for the public>`
+Plain English Summary:
+<Simple explanation for non-lawyers>
+
+Do not include anything before or after these headings. Do not say 'Sure', 'Here is', or any greetings. Only return the two exact sections.`
           },
           {
             role: 'user',
