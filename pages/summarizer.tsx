@@ -1,4 +1,6 @@
+// File: pages/summarizer.tsx
 "use client";
+
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 
@@ -8,9 +10,11 @@ export default function Summarizer() {
   const router = useRouter();
 
   const handleSubmit = async () => {
-    if (!input.trim()) return alert('Please enter a judgment text.');
+    if (!input.trim()) {
+      alert('Please enter a judgment text.');
+      return;
+    }
     setLoading(true);
-
     try {
       const res = await fetch('/api/summarize', {
         method: 'POST',
@@ -18,22 +22,16 @@ export default function Summarizer() {
         body: JSON.stringify({ text: input }),
       });
       const data = await res.json();
-
       if (data.legal && data.plain) {
-        // Save raw as well for debugging
         localStorage.setItem(
           'verdict_summary',
-          JSON.stringify({
-            legal: data.legal,
-            plain: data.plain,
-            raw: data.raw || '',
-          })
+          JSON.stringify({ legal: data.legal, plain: data.plain, raw: data.raw })
         );
         router.push('/result');
       } else {
         alert('Summary not generated. Please try again.');
       }
-    } catch (err) {
+    } catch {
       alert('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
