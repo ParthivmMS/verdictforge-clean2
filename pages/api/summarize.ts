@@ -34,13 +34,15 @@ export default async function handler(
           messages: [
             {
               role: 'system',
-              content: `You are a legal AI trained to summarize Indian court judgments. Reply with:
+content: `You are a legal AI summarizer. Given a court judgment, reply ONLY in the following format:
 
-Legal Summary: <brief summary for lawyers>
+Legal Summary:
+<professional legal summary>
 
-Plain English Summary: <simplified version for non-lawyers>
+Plain English Summary:
+<simple explanation for non-lawyers>
 
-Return only these two sections. No greetings, no extra text.`,
+Do not include greetings, introductions, or anything else before or after these headings. Just reply in that exact format.`,
             },
             { role: 'user', content: text },
           ],
