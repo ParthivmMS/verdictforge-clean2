@@ -2,41 +2,37 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
+    // Only POST allowed
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   const { text } = req.body;
-
   if (!text || typeof text !== 'string') {
     return res.status(400).json({ message: 'Invalid request body' });
   }
 
   try {
+    // Call OpenAI GPT-4o via OpenAI API
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI trained to summarize Indian court judgments. Reply with:
+            content: `You are a legal AI trained to summarize Indian court judgments. Reply with exactly:
 
-Legal Summary: <summary for lawyers>
+Legal Summary: <your professional summary for lawyers>
 
-Plain English Summary: <simplified summary for non-lawyers>
-
-Use exactly these headings.`
+Plain English Summary: <your simplified summary for non-lawyers>`,
           },
-          {
-            role: 'user',
-            content: text
-          }
-        ]
-      })
+          { role: 'user', content: text },
+        ],
+      }),
     });
 
     const result = await openaiRes.json();
@@ -44,14 +40,15 @@ Use exactly these headings.`
 
     console.log('[DEBUG] OpenAI Response:', content);
 
-    // Updated regex – more tolerant of newline variations
-    const match = content.replace(/\n/g, ' ').match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/i);
+    // Flatten newlines, then extract both parts
+    const match = content
+      .replace(/\r?\n/g, ' ')
+      .match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/i);
 
     const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
     const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
 
     return res.status(200).json({ legal, plain, raw: content });
-
   } catch (err) {
     console.error('API error:', err);
     return res.status(500).json({ message: 'Internal Server Error' });
