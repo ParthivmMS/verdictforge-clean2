@@ -1,4 +1,6 @@
+// File: pages/result.tsx
 "use client";
+
 import { useEffect, useState } from 'react';
 
 type Summary = {
@@ -28,7 +30,6 @@ export default function Result() {
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">🧾 Summary</h1>
 
-        {/* Legal Summary */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-2">📘 Legal Summary</h2>
           <p className="whitespace-pre-line bg-zinc-50 dark:bg-zinc-800 p-4 rounded-xl border dark:border-zinc-700">
@@ -36,7 +37,6 @@ export default function Result() {
           </p>
         </div>
 
-        {/* Plain English Summary */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-2">💬 Plain English Summary</h2>
           <p className="whitespace-pre-line bg-zinc-50 dark:bg-zinc-800 p-4 rounded-xl border dark:border-zinc-700">
@@ -44,11 +44,10 @@ export default function Result() {
           </p>
         </div>
 
-        {/* Raw AI Output for debugging */}
         {summary.raw && (
           <div className="mb-8">
             <h2 className="text-xl font-semibold mb-2 text-red-500">
-              🧪 Raw AI Output
+              🧪 Raw AI Output (Debug)
             </h2>
             <pre className="whitespace-pre-wrap bg-yellow-50 dark:bg-yellow-900 p-4 rounded-xl border dark:border-yellow-700 text-sm">
               {summary.raw}
