@@ -1,3 +1,4 @@
+// File: pages/api/summarize.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -14,45 +15,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const response = await fetch('https://api.deepinfra.com/v1/openai/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.DEEPINFRA_API_KEY}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${process.env.DEEPINFRA_API_KEY}`, // 🟢 Use DeepInfra or change to OPENAI_API_KEY if using OpenAI
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'gpt-4',
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI. Return exactly two sections:
+            content: `You are a legal AI summarizer. Given a court judgment, reply with only the following two headings and summaries.
 
 Legal Summary:
-<short legal summary for lawyers>
+<Brief legal summary for lawyers>
 
 Plain English Summary:
-<simple version for non-lawyers>
+<Simple explanation for non-lawyers>
 
-Don't add any other words or introductions. Just return these two sections with headings.`
+Do not include anything before or after these headings. Do not say 'Sure', 'Here is', or any greetings. Only return the two exact sections.`,
           },
-          {
-            role: 'user',
-            content: text
-          }
-        ]
-      })
+          { role: 'user', content: text },
+        ],
+      }),
     });
 
     const result = await response.json();
     const content = result?.choices?.[0]?.message?.content?.trim() || '';
 
-    // [DEBUG]
-    console.log('[DEBUG] DeepInfra GPT-4 Response:', content);
+    console.log('[DEBUG] AI Raw Output:', content);
 
-    // Try extracting both parts
-    const match = content.match(/Legal Summary[:\-]?\s*([\s\S]+?)\s*Plain English Summary[:\-]?\s*([\s\S]+)/i);
+    const match = content.replace(/\r?\n/g, ' ').match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/i);
+
     const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
     const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
 
     return res.status(200).json({ legal, plain, raw: content });
-
   } catch (err) {
     console.error('[ERROR] API failed:', err);
     return res.status(500).json({ message: 'Internal Server Error' });
