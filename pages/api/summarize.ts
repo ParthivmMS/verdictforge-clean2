@@ -40,13 +40,10 @@ Plain English Summary: <your simplified summary for non-lawyers>`,
 
     console.log('[DEBUG] OpenAI Response:', content);
 
-    // Flatten newlines, then extract both parts
-    const match = content
-      .replace(/\r?\n/g, ' ')
-      .match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/i);
+    const match = content.match(/Legal Summary:\s*([\s\S]*?)\s*Plain English Summary:\s*([\s\S]*)/i);
 
-    const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
-    const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
+const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
+const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
 
     return res.status(200).json({ legal, plain, raw: content });
   } catch (err) {
