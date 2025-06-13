@@ -1,57 +1,32 @@
-// File: pages/api/summarize.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
+// File: pages/api/summarize.ts import type { NextApiRequest, NextApiResponse } from 'next';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
+export default async function handler(req: NextApiRequest, res: NextApiResponse) { if (req.method !== 'POST') { return res.status(405).json({ message: 'Method not allowed' }); }
 
-  const { text } = req.body;
-  if (!text || typeof text !== 'string') {
-    return res.status(400).json({ message: 'Invalid request body' });
-  }
+const { text } = req.body;
 
-  try {
-    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a legal AI summarizer. Given a court judgment, reply with only the following two headings and summaries:
+if (!text || typeof text !== 'string') { return res.status(400).json({ message: 'Invalid request body' }); }
 
-Legal Summary:
-<Brief legal summary for lawyers>
+try { const openrouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', { method: 'POST', headers: { Authorization: Bearer ${process.env.OPENROUTER_API_KEY}, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'mistralai/mistral-7b-instruct', messages: [ { role: 'system', content: `You are a legal AI summarizer. Given a court judgment, reply with only the following two headings and summaries.
 
-Plain English Summary:
-<Simple explanation for non-lawyers>
+Legal Summary: <Brief legal summary for lawyers>
 
-Do not include anything before or after these headings. Do not say 'Sure', 'Here is', or any greetings. Only return the two exact sections.`
-          },
-          { role: 'user', content: text },
-        ],
-      }),
-    });
+Plain English Summary: <Simple explanation for non-lawyers>
 
-    const result = await openaiRes.json();
-    const content = result?.choices?.[0]?.message?.content?.trim() || '';
+Do not include anything before or after these headings. Do not say 'Sure', 'Here is', or any greetings. Only return the two exact sections.` }, { role: 'user', content: text } ] }) });
 
-    console.log('[DEBUG] OpenAI Response:', content); // Shows in Vercel Logs
+const result = await openrouterRes.json();
+const content = result?.choices?.[0]?.message?.content?.trim() || '';
 
-    // 📌 Extract Legal and Plain summaries
-    const match = content.replace(/\n/g, ' ').match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/i);
-    const legal = match?.[1]?.trim() || 'N/A';
-    const plain = match?.[2]?.trim() || 'N/A';
+console.log('[DEBUG] OpenRouter Response:', content);
 
-    return res.status(200).json({ legal, plain, raw: content });
+const match = content
+  .replace(/\r?\n/g, ' ')
+  .match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/i);
 
-  } catch (err) {
-    console.error('API error:', err);
-    return res.status(500).json({ message: 'Internal Server Error' });
-  }
-}
+const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
+const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
+
+return res.status(200).json({ legal, plain, raw: content });
+
+} catch (err) { console.error('API error:', err); return res.status(500).json({ message: 'Internal Server Error' }); } }
+
