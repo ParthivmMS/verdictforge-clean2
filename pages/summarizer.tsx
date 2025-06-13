@@ -1,4 +1,3 @@
-// File: pages/summarizer.tsx
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 
@@ -8,7 +7,7 @@ export default function Summarizer() {
   const router = useRouter();
 
   const handleSubmit = async () => {
-    if (!input.trim()) return alert("Please enter a judgment text.");
+    if (!input.trim()) return alert('Please enter a judgment text.');
     setLoading(true);
 
     try {
@@ -17,21 +16,24 @@ export default function Summarizer() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: input }),
       });
-
       const data = await res.json();
 
       if (data.legal && data.plain) {
-        localStorage.setItem('verdict_summary', JSON.stringify({
-          legal: data.legal,
-          plain: data.plain,
-          raw: data.raw || '',
-        }));
+        // Save raw as well for debugging
+        localStorage.setItem(
+          'verdict_summary',
+          JSON.stringify({
+            legal: data.legal,
+            plain: data.plain,
+            raw: data.raw || '',
+          })
+        );
         router.push('/result');
       } else {
-        alert("Summary not generated. Please try again.");
+        alert('Summary not generated. Please try again.');
       }
     } catch (err) {
-      alert("Something went wrong. Please try again.");
+      alert('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -52,7 +54,7 @@ export default function Summarizer() {
           disabled={loading}
           className="mt-4 w-full py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
         >
-          {loading ? "Summarizing..." : "Generate Summary"}
+          {loading ? 'Summarizing...' : 'Generate Summary'}
         </button>
       </div>
     </main>
