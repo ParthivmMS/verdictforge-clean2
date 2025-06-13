@@ -30,17 +30,17 @@ export default async function handler(
           Authorization: `Bearer ${process.env.DEEPINFRA_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'mixtral-large-incite',  // free Mixtral model
+          model: 'mistralai/Mixtral-8x7B-Instruct-v0.1',
           messages: [
             {
               role: 'system',
-              content: `You are a legal AI trained to summarize Indian court judgments. Reply with *only*:
+              content: `You are a legal AI trained to summarize Indian court judgments. Reply with:
 
-Legal Summary: <your professional summary for lawyers>
+Legal Summary: <brief summary for lawyers>
 
-Plain English Summary: <your simplified summary for non-lawyers>
+Plain English Summary: <simplified version for non-lawyers>
 
-Do not add anything else.`,
+Return only these two sections. No greetings, no extra text.`,
             },
             { role: 'user', content: text },
           ],
@@ -53,16 +53,13 @@ Do not add anything else.`,
 
     console.log('[DEBUG] DeepInfra Response:', content);
 
-    // Flatten and regex-extract both parts
-    const match = content.match(/Legal Summary:\s*([\s\S]*?)Plain English Summary:\s*([\s\S]*)/i);
+    // ✅ Clean multiline regex
+    const match = content.match(
+      /Legal Summary:\s*([\s\S]*?)Plain English Summary:\s*([\s\S]*)/i
+    );
 
-const legal = match?.[1]?.trim() || content || 'N/A';
-const plain = match?.[2]?.trim() || 'N/A';
-
-return res.status(200).json({ legal, plain, raw: content });
-
-    const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
-    const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
+    const legal = match?.[1]?.trim() || content || 'N/A';
+    const plain = match?.[2]?.trim() || 'N/A';
 
     return res.status(200).json({ legal, plain, raw: content });
   } catch (err) {
