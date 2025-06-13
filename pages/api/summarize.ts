@@ -1,7 +1,16 @@
 // File: pages/api/summarize.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+type Summaries = {
+  legal: string;
+  plain: string;
+  raw?: string;
+};
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<Summaries | { message: string }>
+) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
@@ -12,51 +21,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const response = await fetch('https://api.deepinfra.com/v1/openai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.DEEPINFRA_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a legal AI summarizer. Given a court judgment, reply with only the following two headings and summaries:
+    const deepinfraRes = await fetch(
+      'https://api.deepinfra.com/v1/text/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.DEEPINFRA_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'mixtral-large-incite',  // free Mixtral model
+          messages: [
+            {
+              role: 'system',
+              content: `You are a legal AI trained to summarize Indian court judgments. Reply with *only*:
 
-Legal Summary:
-<Brief legal summary for lawyers>
+Legal Summary: <your professional summary for lawyers>
 
-Plain English Summary:
-<Simple explanation for non-lawyers>
+Plain English Summary: <your simplified summary for non-lawyers>
 
-Do not include anything before or after these headings. Do not say "Sure", "Here is", or any greetings. Only return the two exact sections.`
-          },
-          { role: 'user', content: text },
-        ],
-      }),
-    });
+Do not add anything else.`,
+            },
+            { role: 'user', content: text },
+          ],
+        }),
+      }
+    );
 
-    const result = await response.json();
-    const content = result?.choices?.[0]?.message?.content?.trim() || '';
+    const result = await deepinfraRes.json();
+    const content = result.choices?.[0]?.message?.content?.trim() || '';
 
-    // ✅ DEBUG: See exactly what the AI returned in Vercel logs
-    console.log('[DEBUG] Full AI raw output:', content);
+    console.log('[DEBUG] DeepInfra Response:', content);
 
-    // ✅ Try to extract summaries using regex
-    const match = content
-      .replace(/\r?\n/g, ' ')
-      .match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/i);
+    // Flatten and regex-extract both parts
+    const oneLine = content.replace(/\r?\n/g, ' ');
+    const match = oneLine.match(
+      /Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/i
+    );
 
-    // ✅ Use fallback if extraction fails
-    const legal = match?.[1]?.trim() || content.slice(0, 400);  // Use first 400 chars of raw content
-    const plain = match?.[2]?.trim() || 'Plain English summary could not be extracted.';
+    const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
+    const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
 
     return res.status(200).json({ legal, plain, raw: content });
-
   } catch (err) {
-    console.error('[ERROR] API failed:', err);
+    console.error('API error:', err);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
