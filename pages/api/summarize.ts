@@ -7,7 +7,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { text } = req.body;
-
   if (!text || typeof text !== 'string') {
     return res.status(400).json({ message: 'Invalid request body' });
   }
@@ -17,14 +16,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: `You are a legal AI summarizer. Given a court judgment, reply with only the following two headings and summaries.
+            content: `You are a legal AI summarizer. Given a court judgment, reply with only the following two headings and summaries:
 
 Legal Summary:
 <Brief legal summary for lawyers>
@@ -34,24 +33,18 @@ Plain English Summary:
 
 Do not include anything before or after these headings. Do not say 'Sure', 'Here is', or any greetings. Only return the two exact sections.`
           },
-          {
-            role: 'user',
-            content: text
-          }
-        ]
-      })
+          { role: 'user', content: text },
+        ],
+      }),
     });
 
     const result = await openaiRes.json();
     const content = result?.choices?.[0]?.message?.content?.trim() || '';
 
-    console.log('[DEBUG] OpenAI Response:', content);
+    console.log('[DEBUG] OpenAI Response:', content); // Shows in Vercel Logs
 
-    // Final improved regex parsing
-    const match = content
-      .replace(/\r?\n/g, ' ')
-      .match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/i);
-
+    // 📌 Extract Legal and Plain summaries
+    const match = content.replace(/\n/g, ' ').match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/i);
     const legal = match?.[1]?.trim() || 'N/A';
     const plain = match?.[2]?.trim() || 'N/A';
 
