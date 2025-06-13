@@ -37,8 +37,7 @@ Plain English Summary: <your simplified summary for non-lawyers>`,
 
     const result = await openaiRes.json();
     const content = result?.choices?.[0]?.message?.content?.trim() || '';
-
-    console.log('[DEBUG] OpenAI Response:', content);
+console.log('[DEBUG] OpenAI Raw Response:', content); // ✅ ADDED LINE
 
     const match = content.match(/Legal Summary:\s*([\s\S]*?)\s*Plain English Summary:\s*([\s\S]*)/i);
 
