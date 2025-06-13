@@ -1,4 +1,3 @@
-// File: pages/api/summarize.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -27,9 +26,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             content: `You are a legal AI trained to summarize Indian court judgments. Reply with:
 
 Legal Summary: <summary for lawyers>
+
 Plain English Summary: <simplified summary for non-lawyers>
 
-Use the exact headings.`
+Use exactly these headings.`
           },
           {
             role: 'user',
@@ -42,9 +42,11 @@ Use the exact headings.`
     const result = await openaiRes.json();
     const content = result?.choices?.[0]?.message?.content?.trim() || '';
 
-    console.log('[DEBUG] OpenAI Response:', content); // Show raw output in logs
+    console.log('[DEBUG] OpenAI Response:', content);
 
+    // Updated regex – more tolerant of newline variations
     const match = content.replace(/\n/g, ' ').match(/Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/i);
+
     const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
     const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
 
