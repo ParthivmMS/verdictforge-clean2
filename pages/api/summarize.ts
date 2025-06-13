@@ -54,10 +54,12 @@ Do not add anything else.`,
     console.log('[DEBUG] DeepInfra Response:', content);
 
     // Flatten and regex-extract both parts
-    const oneLine = content.replace(/\r?\n/g, ' ');
-    const match = oneLine.match(
-      /Legal Summary:\s*(.*?)\s*Plain English Summary:\s*(.*)/i
-    );
+    const match = content.match(/Legal Summary:\s*([\s\S]*?)Plain English Summary:\s*([\s\S]*)/i);
+
+const legal = match?.[1]?.trim() || content || 'N/A';
+const plain = match?.[2]?.trim() || 'N/A';
+
+return res.status(200).json({ legal, plain, raw: content });
 
     const legal = match?.[1]?.trim() || '[Could not extract legal summary]';
     const plain = match?.[2]?.trim() || '[Could not extract plain summary]';
